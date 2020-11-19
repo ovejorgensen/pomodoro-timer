@@ -1,9 +1,25 @@
 <template>
   <div class="outer">
+    <h1 class="title">Pomodoro Timer</h1>
     <div class="tabs">
-      <button @click="workStart()" class="btn col">Worky Timer</button>
-      <button @click="shortBreak()" class="btn col">Short Breaky</button>
-      <button @click="longBreak()" class="btn col">Long Breaky</button>
+      <button
+        @click="workStart()"
+        class="btn col"
+        v-bind:style="state==0 ? 'border-bottom: 6px solid #52796f' : 'border: none'">
+        Worky Timer
+      </button>
+      <button
+        @click="shortBreak()"
+        class="btn col"
+        v-bind:style="state==1 ? 'border-bottom: 6px solid #52796f' : 'border: none'">
+        Short Breaky
+      </button>
+      <button
+        @click="longBreak()"
+        class="btn col"
+        v-bind:style="state==2 ? 'border-bottom: 6px solid #52796f' : 'border: none'">
+        Long Breaky
+      </button>
     </div>
     <div class="content">
       <TimerCard
@@ -59,6 +75,9 @@ export default class FrontPage extends Vue {
 </script>
 
 <style scoped lang="scss">
+.title {
+  display: inline;
+}
 .content {
   display: flex;
   flex-basis: 100%;
@@ -70,6 +89,9 @@ export default class FrontPage extends Vue {
 .tabs {
   display: flex;
   flex-basis: 100%;
+}
+.current-tab {
+  border-bottom: 4px solid #52796f;
 }
 .tabs .col {
   margin: 20px;

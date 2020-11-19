@@ -88,6 +88,7 @@ export default class TimerCard extends Vue {
     const seconds: string = this.seconds.toString().padStart(2, "0");
 
     this.timing = `${mins}:${seconds}`;
+    document.title = this.timing;
 
     if (this.seconds > 0) this.seconds--;
     else if (this.seconds == 0 && this.minutes >= 1) {
@@ -105,12 +106,12 @@ export default class TimerCard extends Vue {
     this.reset();
     switch (this.state) {
       case 0: {
-        this.timing = "Breaky Time!";
+        this.timing = document.title = "Breaky Time!";
         this.notifyMe("WOOOOHOOO TIME FOR A BREAK!");
         break;
       }
       case 1: {
-        this.timing = "Get back to work!";
+        this.timing = document.title = "Get back to work!";
         this.notifyMe("Okay mister, you know what's up. Back to work");
         break;
       }
