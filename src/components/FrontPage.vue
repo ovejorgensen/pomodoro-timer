@@ -1,23 +1,40 @@
 <template>
   <div class="outer">
     <h1 class="title">Pomodoro Timer</h1>
-    <div class="tabs">
+    <h3 v-if="inSession">
+      Currently in session hosted by: <br />
+      {{ currentSessionHost }}
+    </h3>
+    <div v-if="hostingSession">
+      <h3>You are hosting a session!</h3>
+      <p>People in session: {{ peopleInSession }}</p>
+    </div>
+    <div v-if="!inSession" class="tabs">
       <button
         @click="workStart()"
         class="btn col"
-        v-bind:style="state==0 ? 'border-bottom: 6px solid #52796f' : 'border: none'">
+        v-bind:style="
+          state == 0 ? 'border-bottom: 6px solid #52796f' : 'border: none'
+        "
+      >
         Work Timer
       </button>
       <button
         @click="shortBreak()"
         class="btn col"
-        v-bind:style="state==1 ? 'border-bottom: 6px solid #52796f' : 'border: none'">
+        v-bind:style="
+          state == 1 ? 'border-bottom: 6px solid #52796f' : 'border: none'
+        "
+      >
         Short Break
       </button>
       <button
         @click="longBreak()"
         class="btn col"
-        v-bind:style="state==2 ? 'border-bottom: 6px solid #52796f' : 'border: none'">
+        v-bind:style="
+          state == 2 ? 'border-bottom: 6px solid #52796f' : 'border: none'
+        "
+      >
         Long Break
       </button>
     </div>
@@ -32,14 +49,14 @@
       <div class="joinMenu" v-else-if="sessionMenu == 1">
         <h2>Join Session</h2>
         <div v-if="showingPeople">
-        <p
-          v-for="person in people"
-          class="person"
-          :key="person.id"
-          @click="personClick(person.name)"
-        >
-          {{ person.name }}
-        </p>
+          <p
+            v-for="person in people"
+            class="person"
+            :key="person.id"
+            @click="personClick(person.name)"
+          >
+            {{ person.name }}
+          </p>
         </div>
       </div>
       <div class="createMenu" v-else>
@@ -47,15 +64,34 @@
         <form>
           <label for="fname">Enter a username:</label><br />
           <input type="text" id="name" v-model="name" placeholder="Name.." />
-          <input type="submit" @click.prevent="formSubmit(name)" value="Create" />
+          <input
+            type="submit"
+            @click.prevent="formSubmit(name)"
+            value="Create"
+          />
         </form>
+        <p v-if="formMessageActive">{{formMessage}}</p>
       </div>
     </div>
-    <div class="lower-btns">
-      <button v-if="!active" class="btn col" @click="timerStart()">Start Timer</button>
+    <div v-if="!(inSession || hostingSession)" class="lower-btns">
+      <button v-if="!active" class="btn col" @click="timerStart()">
+        Start Timer
+      </button>
       <button v-else class="btn col" @click="timerPause()">Pause Timer</button>
       <button class="btn session" @click="joinSession()">Join Session</button>
-      <button class="btn session" @click="createSession()">Create Session</button>
+      <button class="btn session" @click="createSession()">
+        Create Session
+      </button>
+    </div>
+    <div v-else-if="hostingSession" class="lower-btns">
+      <button class="btn col" @click="endSession()">
+        End Session
+      </button>
+    </div>
+    <div v-else class="lower-btns">
+      <button class="btn col" @click="leaveSession()">
+        Leave Session
+      </button>
     </div>
   </div>
 </template>
@@ -67,8 +103,8 @@ import TimerCard from "./TimerCard.vue";
 
 @Options({
   components: {
-    TimerCard
-  }
+    TimerCard,
+  },
 })
 export default class FrontPage extends Vue {
   active = false;
@@ -76,6 +112,12 @@ export default class FrontPage extends Vue {
   state = 0;
   showingPeople = false;
   people: [object] | undefined;
+  inSession = false;
+  hostingSession = false;
+  peopleInSession = 0;
+  formMessage: string | undefined;
+  formMessageActive = false;
+  currentSessionHost: string | undefined = "none";
 
   ws: WebSocket | undefined;
 
@@ -100,7 +142,7 @@ export default class FrontPage extends Vue {
     this.state = 0;
     this.active = false;
   }
-  shortBreak(){
+  shortBreak() {
     this.sessionMenu = 0;
     this.state = 1;
     this.active = false;
@@ -110,7 +152,17 @@ export default class FrontPage extends Vue {
     this.state = 2;
     this.active = false;
   }
-  startWebSocket(type: object | undefined){
+  leaveSession() {
+    this.inSession = false;
+  }
+  endSession() {
+    this.hostingSession = false;
+    const message = {
+      type: "endSession"
+    }
+    this.ws?.send(JSON.stringify(message));
+  }
+  startWebSocket(type: object | undefined) {
     this.ws = new WebSocket("ws://localhost:9898/");
     const self = this.ws;
     this.ws.onopen = () => {
@@ -118,25 +170,40 @@ export default class FrontPage extends Vue {
       if (type) self.send(JSON.stringify(type));
     };
     this.ws.onmessage = e => {
-      console.log("Received: '" + e.data + "'");
+      console.log(`Received: ${e.data}`);
     };
     this.ws.onmessage = e => {
-      if (JSON.parse(e.data).type == "usernames"){
+      const resType: string = JSON.parse(e.data).type;
+      if (resType == "usernames") {
         this.people = undefined;
         this.showingPeople = false;
-        for (const el of JSON.parse(e.data).names){
+        for (const el of JSON.parse(e.data).names) {
           const current = {
             id: Math.random(),
-            name: el
-          }
-          if(!this.people) this.people = [current];
+            name: el,
+          };
+          if (!this.people) this.people = [current];
           else this.people.push(current);
-          this.showingPeople = true;
         }
-      } else console.log("hey, received: ", e.data);
+        this.showingPeople = true;
+      } else if (resType == "confirmJoin") {
+        this.inSession = true;
+        this.sessionMenu = 0;
+        this.currentSessionHost = JSON.parse(e.data).name;
+      } else if (resType == "takenUsername") {
+        this.sessionMenu = 2;
+        this.formMessage = "This username is taken";
+        this.formMessageActive = true;
+      } else if (resType == "successfulCreate") {
+        this.sessionMenu = 0;
+        this.hostingSession = true;
+        this.formMessageActive = false;
+      } else {
+        console.log(`hey, received:${e.data}`);
+      }
     };
   }
-  personClick(name){
+  personClick(name) {
     const joinObj = {
       type: "join",
       name: name
@@ -144,16 +211,16 @@ export default class FrontPage extends Vue {
     if (!this.ws) this.startWebSocket(joinObj);
     else this.ws.send(JSON.stringify(joinObj));
   }
-  joinSession(){
+  joinSession() {
     this.sessionMenu = 1;
     if (!this.ws) {
       this.startWebSocket({ type: "fetchNames" });
     } else this.ws.send(JSON.stringify({ type: "fetchNames" }));
   }
-  createSession(){
+  createSession() {
     this.sessionMenu = 2;
   }
-  formSubmit(name){
+  formSubmit(name) {
     const createObj = {
       type: "create",
       name: name
@@ -165,7 +232,8 @@ export default class FrontPage extends Vue {
 </script>
 
 <style scoped lang="scss">
-input[type=text], select {
+input[type="text"],
+select {
   width: 50%;
   padding: 12px 20px;
   margin: 8px 10px;
@@ -175,7 +243,7 @@ input[type=text], select {
   box-sizing: border-box;
   font-family: inherit;
 }
-input[type=submit] {
+input[type="submit"] {
   width: 20%;
   background-color: #52796f;
   color: inherit;
@@ -255,10 +323,6 @@ input[type=submit] {
   align-content: flex-start;
   flex-wrap: wrap;
   row-gap: 100px;
-}
-h3 {
-  background-color: #354f52;
-  border-radius: 2px;
 }
 .btn {
   width: 120px;
