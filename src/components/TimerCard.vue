@@ -22,6 +22,8 @@ export default class TimerCard extends Vue {
   @Prop(Number) readonly startAt!: number;
   @Prop({ default: 0 }) state!: number;
   @Prop({ default: false }) active!: boolean;
+  @Prop({ default: false }) timerWatch!: string;
+  
   minutes = 25;
   seconds = 0;
   timing = "";
@@ -42,6 +44,16 @@ export default class TimerCard extends Vue {
   @Emit("reset-timer")
   reset() {
     return false;
+  }
+
+  @Emit("time-remaining")
+  timeRemaining() {
+    return this.timing;
+  }
+
+  @Watch("timerWatch")
+  changeTime(val: string) {
+    this.timing = val;
   }
 
   @Watch("state")
@@ -89,6 +101,8 @@ export default class TimerCard extends Vue {
 
     this.timing = `${mins}:${seconds}`;
     document.title = this.timing;
+
+    this.timeRemaining();
 
     if (this.seconds > 0) this.seconds--;
     else if (this.seconds == 0 && this.minutes >= 1) {
