@@ -12,8 +12,12 @@
       <h2 v-if="state == 2">Long Break</h2>
     </div>
     <div v-if="hostingSession">
+      <h3>Hey {{ username }}</h3>
       <h3>You are hosting a session!</h3>
       <p>People in session: {{ peopleInSession }}</p>
+      <h2 v-if="state == 0">Work Timer</h2>
+      <h2 v-if="state == 1">Short Break</h2>
+      <h2 v-if="state == 2">Long Break</h2>
     </div>
     <div v-if="!inSession" class="tabs">
       <button
@@ -50,8 +54,9 @@
         @reset-timer="resetTimer"
         @time-remaining="timeRemaining"
         :state="state"
-        :startAt="25"
+        :startAt="state == 0 ? 25 : state == 1 ? 5 : 15"
         :timerWatch="timerWatch"
+        :receivedTime="receivedTime"
         :active="active"
       />
       <div class="joinMenu" v-else-if="sessionMenu == 1">
@@ -124,8 +129,10 @@ export default class FrontPage extends Vue {
   sessionMenu = 0;
   state = 0;
   time: number | undefined;
+  receivedTime: string | undefined;
   showingPeople = false;
   people: [object] | undefined;
+  username: string | undefined;
   inSession = false;
   hostingSession = false;
   peopleInSession = 0;
@@ -156,7 +163,7 @@ export default class FrontPage extends Vue {
     this.state = 0;
     this.active = false;
 
-    this.ws?.send(
+    this.sendWS(
       JSON.stringify({
         type: "sendHostInfo",
         state: this.state,
@@ -169,7 +176,7 @@ export default class FrontPage extends Vue {
     this.state = 1;
     this.active = false;
 
-    this.ws?.send(
+    this.sendWS(
       JSON.stringify({
         type: "sendHostInfo",
         state: this.state,
@@ -182,7 +189,7 @@ export default class FrontPage extends Vue {
     this.state = 2;
     this.active = false;
 
-    this.ws?.send(
+    this.sendWS(
       JSON.stringify({
         type: "sendHostInfo",
         state: this.state,
@@ -192,7 +199,7 @@ export default class FrontPage extends Vue {
   }
   timeRemaining(time) {
     this.time = time;
-    this.ws?.send(
+    this.sendWS(
       JSON.stringify({
         type: "sendHostInfo",
         state: this.state,
@@ -202,13 +209,19 @@ export default class FrontPage extends Vue {
   }
   leaveSession() {
     this.inSession = false;
+    this.sendWS(JSON.stringify({ type: "leaveSession" }));
   }
   endSession() {
+    this.peopleInSession = 0;
     this.hostingSession = false;
     const message = {
-      type: "endSession",
+      type: "endSession"
     };
-    this.ws?.send(JSON.stringify(message));
+    this.sendWS(JSON.stringify(message));
+    this.ws = undefined;
+  }
+  sendWS(message){
+    this.ws?.send(message);
   }
   startWebSocket(type: object | undefined) {
     this.ws = new WebSocket("ws://localhost:9898/");
@@ -216,6 +229,14 @@ export default class FrontPage extends Vue {
     this.ws.onopen = () => {
       console.log("WebSocket Connection Established");
       if (type) self.send(JSON.stringify(type));
+    };
+    this.ws.onclose = () => {
+      console.log("WebSocket Connection Closed");
+      this.ws = undefined;
+    };
+    this.ws.onerror = () => {
+      console.log("WebSocket Error");
+      this.ws = undefined;
     };
     this.ws.onmessage = (e) => {
       console.log(`Received: ${e.data}`);
@@ -234,50 +255,64 @@ export default class FrontPage extends Vue {
           else this.people.push(current);
         }
         this.showingPeople = true;
-      } 
-      
+      }
+
       else if (resType == "confirmJoin") {
         this.inSession = true;
-        this.sessionMenu = 0;
         this.currentSessionHost = JSON.parse(e.data).name;
-
+        this.peopleInSession = JSON.parse(e.data).numUsers;
         this.state = JSON.parse(e.data).state;
-        console.log(`Changed to state ${this.state}`);
+        console.log("hello", this.receivedTime);
 
-      } 
-      
+        this.sessionMenu = 0;
+        this.receivedTime = JSON.parse(e.data).time;
+      }
+
       else if (resType == "takenUsername") {
         this.sessionMenu = 2;
         this.formMessage = "This username is taken";
         this.formMessageActive = true;
+      }
 
-      } 
-      
+      else if (resType == "longName") {
+        this.sessionMenu = 2;
+        this.formMessage = "Max 10 characters";
+        this.formMessageActive = true;
+      }
+
       else if (resType == "successfulCreate") {
         this.sessionMenu = 0;
         this.hostingSession = true;
         this.formMessageActive = false;
+        this.peopleInSession = 0;
       }
 
       else if (resType == "getUsersInfo") {
         this.peopleInSession = JSON.parse(e.data).numUsers;
       }
 
-       else if (resType == "getHostInfo") {
-        this.ws?.send(
+      else if (resType == "endSession") {
+        this.inSession = false;
+        this.sendWS(JSON.stringify({ type: "leaveSession" }));
+      }
+
+      else if (resType == "getHostInfo") {
+        this.sendWS(
           JSON.stringify({
             type: "sendHostInfo",
             state: this.state,
             time: this.time,
           })
         );
-      } else if (resType == "hostStatus") {
+      }
+
+      else if (resType == "hostStatus") {
         this.peopleInSession = JSON.parse(e.data).numUsers;
         this.state = JSON.parse(e.data).state;
-        console.log(`Changed to state ${this.state}`);
         this.timerWatch = JSON.parse(e.data).time;
-        console.log(`Changed to time ${this.timerWatch}`);
-      } else {
+      }
+
+      else {
         console.log(`hey, received:${e.data}`);
       }
     };
@@ -300,13 +335,14 @@ export default class FrontPage extends Vue {
     this.sessionMenu = 2;
   }
   formSubmit(name) {
+    this.username = name;
     const createObj = {
       type: "create",
       name: name,
       state: this.state,
     };
     if (!this.ws) this.startWebSocket(createObj);
-    else this.ws?.send(JSON.stringify(createObj));
+    else this.sendWS(JSON.stringify(createObj));
   }
 }
 </script>

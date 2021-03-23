@@ -1,6 +1,6 @@
 <template>
   <FrontPage />
-  <p class="version">v1.0.0-alpha</p>
+  <p class="version">v1.1.0</p>
   <p class="author">
     <span style="font-size: 25px">©</span> Ove Jørgensen
     <a class="git-icon" target="_blank" href="https://www.github.com/ovejorgensen">

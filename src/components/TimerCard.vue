@@ -23,6 +23,7 @@ export default class TimerCard extends Vue {
   @Prop({ default: 0 }) state!: number;
   @Prop({ default: false }) active!: boolean;
   @Prop({ default: false }) timerWatch!: string;
+  @Prop({ default: undefined }) receivedTime!: string | undefined;
   
   minutes = 25;
   seconds = 0;
@@ -37,8 +38,14 @@ export default class TimerCard extends Vue {
     //   console.log(len);
     //   path.style.setProperty('--total-length', len.toString());
     // }
-    this.timing = this.startAt.toString().padStart(2, "0") + ":00";
-    this.minutes = this.startAt;
+    if (this.receivedTime !== undefined){
+      this.timing = this.receivedTime;
+      this.minutes = +this.receivedTime;
+    }
+    else {
+      this.timing = this.startAt.toString().padStart(2, "0") + ":00";
+      this.minutes = this.startAt;
+    }
   }
 
   @Emit("reset-timer")
@@ -53,6 +60,12 @@ export default class TimerCard extends Vue {
 
   @Watch("timerWatch")
   changeTime(val: string) {
+    this.timing = val;
+  }
+
+  @Watch("receivedTime")
+  receiver(val: string) {
+    console.log("hello again", this.receivedTime);
     this.timing = val;
   }
 
