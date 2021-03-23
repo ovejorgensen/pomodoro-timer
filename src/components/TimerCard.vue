@@ -22,6 +22,7 @@ export default class TimerCard extends Vue {
   @Prop(Number) readonly startAt!: number;
   @Prop({ default: 0 }) state!: number;
   @Prop({ default: false }) active!: boolean;
+  @Prop({ default: false }) inSession!: boolean;
   @Prop({ default: false }) timerWatch!: string;
   @Prop({ default: undefined }) receivedTime!: string | undefined;
   
@@ -41,6 +42,7 @@ export default class TimerCard extends Vue {
     if (this.receivedTime !== undefined){
       this.timing = this.receivedTime;
       this.minutes = +this.receivedTime;
+
     }
     else {
       this.timing = this.startAt.toString().padStart(2, "0") + ":00";
@@ -60,13 +62,23 @@ export default class TimerCard extends Vue {
 
   @Watch("timerWatch")
   changeTime(val: string) {
-    this.timing = val;
+    if (typeof(val) !== "boolean"){
+      this.timing = val;
+      this.minutes = +val.split(":")[0];
+      this.seconds = +val.split(":")[1];
+    }
   }
 
   @Watch("receivedTime")
   receiver(val: string) {
-    console.log("hello again", this.receivedTime);
     this.timing = val;
+  }
+
+  @Watch("inSession")
+  session(val: boolean) {
+    if (!val) {
+      this.onPropertyChanged(this.active);
+    }
   }
 
   @Watch("state")
@@ -95,15 +107,20 @@ export default class TimerCard extends Vue {
 
   @Watch("active")
   onPropertyChanged(val: boolean) {
+    // console.log(val);
     const path: SVGPathElement | null = document.querySelector("path");
     if (!path) return;
     if (val) {
       this.started = true;
-      this.interval = setInterval(this.timerMain, 1000);
+      if (!this.inSession){
+        this.interval = setInterval(this.timerMain, 1000);
+      }
       path.style.display = "block";
       path.style.animationPlayState = "running";
     } else {
-      clearInterval(this.interval);
+      if (!this.inSession){
+        clearInterval(this.interval);
+      }
       path.style.animationPlayState = "paused";
     }
   }
