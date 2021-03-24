@@ -105,13 +105,13 @@ export default class TimerCard extends Vue {
   stateChange(val: number) {
     switch (val) {
       case 0: {
-        this.timing = "1:00";
-        this.minutes = 1;
+        this.timing = "25:00";
+        this.minutes = 25;
         break;
       }
       case 1: {
-        this.timing = "01:00";
-        this.minutes = 1;
+        this.timing = "05:00";
+        this.minutes = 5;
         break;
       }
       case 2: {

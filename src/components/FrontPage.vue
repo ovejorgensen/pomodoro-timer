@@ -1,7 +1,8 @@
 <template>
   <div class="outer">
-    <h1 class="title">Pomodoro Timer</h1>
+    <h1 class="title" v-if="!hostingSession && !inSession">Pomodoro Timer</h1>
     <div v-if="inSession">
+      <h1 class="title">Pomodoro Timer</h1>
       <h3>
         Currently in session hosted by: <br />
         {{ currentSessionHost }}
@@ -12,6 +13,9 @@
       <h2 v-if="state == 2">Long Break</h2>
     </div>
     <div v-if="hostingSession">
+      <h1 class="title">Pomodoro Timer</h1>
+      <br>
+      <br>
       <h3>Hey {{ username }}</h3>
       <h3>You are hosting a session!</h3>
       <p>People in session: {{ peopleInSession }}</p>
@@ -55,7 +59,7 @@
         :sessionMenu="sessionMenu"
         :state="state"
         :inSession="inSession"
-        :startAt="state == 0 ? 1 : state == 1 ? 1 : 15"
+        :startAt="state == 0 ? 25 : state == 1 ? 5 : 15"
         :timerWatch="timerWatch"
         :receivedTime="receivedTime"
         :active="active"
@@ -245,7 +249,7 @@ export default class FrontPage extends Vue {
     this.ws?.send(message);
   }
   startWebSocket(type: object | undefined) {
-    this.ws = new WebSocket("ws://localhost:9898/");
+    this.ws = new WebSocket("ws://54.75.31.106:8080/");
 
     const self = this.ws;
 
@@ -307,6 +311,12 @@ export default class FrontPage extends Vue {
       else if (resType == "longName") {
         this.sessionMenu = 2;
         this.formMessage = "Max 10 characters";
+        this.formMessageActive = true;
+      }
+
+      else if (resType == "emptyName") {
+        this.sessionMenu = 2;
+        this.formMessage = "Name cannot be empty";
         this.formMessageActive = true;
       }
 
@@ -386,6 +396,25 @@ export default class FrontPage extends Vue {
 </script>
 
 <style scoped lang="scss">
+
+@media only screen and (max-width: 600px) {
+  .outer {transform: scale(0.6);}
+}
+@media only screen and (min-width: 600px) {
+  .outer {transform: scale(0.6);}
+}
+@media only screen and (min-width: 800px) {
+  .outer {transform: scale(0.6);}
+}
+@media only screen and (min-width: 900px) {
+  .outer {transform: scale(0.6);}
+}
+@media only screen and (min-width: 1000px) {
+  .outer {transform: scale(0.7);}
+}
+@media only screen and (min-width: 1200px) {
+  .outer {transform: scale(0.8);}
+}
 
 input[type="text"],
 select {

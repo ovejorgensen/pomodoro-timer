@@ -30,7 +30,7 @@ export default class App extends Vue {}
 }
 .author {
   position: absolute;
-  right: 10px;
+  right: 20px;
   bottom: 0;
   .git-icon{
     font-size: 30px;
@@ -44,6 +44,7 @@ body {
   margin: 0;
 }
 #app {
+  overflow-x: hidden;
   display: flex;
   justify-content: center;
   align-items: center;
