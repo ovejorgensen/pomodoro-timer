@@ -249,7 +249,7 @@ export default class FrontPage extends Vue {
     this.ws?.send(message);
   }
   startWebSocket(type: object | undefined) {
-    this.ws = new WebSocket("ws://54.75.31.106:8080/");
+    this.ws = new WebSocket("wss://54.75.31.106:443/");
 
     const self = this.ws;
 
