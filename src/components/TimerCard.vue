@@ -1,8 +1,13 @@
 <template>
-  <div class="card">
+  <div class="card" v-bind:class="{ hideTimerCard: hideCard }">
     <h1>{{ timing }}</h1>
   </div>
-  <svg style="position:absolute" width="400" height="300">
+  <svg 
+    style="position:absolute" 
+    width="400" 
+    height="300" 
+    v-bind:class="{ hideTimerCard: hideCard }"
+  >
     <path
       id="loader-path"
       class="loader"
@@ -23,6 +28,7 @@ export default class TimerCard extends Vue {
   @Prop({ default: 0 }) state!: number;
   @Prop({ default: false }) active!: boolean;
   @Prop({ default: false }) inSession!: boolean;
+  @Prop({ default: false }) sessionMenu!: number;
   @Prop({ default: false }) timerWatch!: string;
   @Prop({ default: undefined }) receivedTime!: string | undefined;
   
@@ -30,6 +36,7 @@ export default class TimerCard extends Vue {
   seconds = 0;
   timing = "";
   started = false;
+  hideCard = false;
   interval: number | undefined;
 
   mounted() {
@@ -41,21 +48,26 @@ export default class TimerCard extends Vue {
     // }
     if (this.receivedTime !== undefined){
       this.timing = this.receivedTime;
-      this.minutes = +this.receivedTime;
-
-    }
+      this.minutes = +this.receivedTime.split(":")[0];
+      this.seconds = +this.receivedTime.split(":")[1];
+    } 
+    // else if (this.timerWatch !== undefined || this.timerWatch == false) {
+    //   this.timing = this.timerWatch;
+    //   this.minutes = +this.timerWatch.split(":")[0];
+    //   this.seconds = +this.timerWatch.split(":")[1];
+    // } 
     else {
       this.timing = this.startAt.toString().padStart(2, "0") + ":00";
       this.minutes = this.startAt;
     }
   }
 
-  @Emit("reset-timer")
+  @Emit("resetTimer")
   reset() {
     return false;
   }
 
-  @Emit("time-remaining")
+  @Emit("timeRemaining")
   timeRemaining() {
     return this.timing;
   }
@@ -66,12 +78,20 @@ export default class TimerCard extends Vue {
       this.timing = val;
       this.minutes = +val.split(":")[0];
       this.seconds = +val.split(":")[1];
+       if (this.seconds == 0 && this.minutes == 0) {
+        this.stopTimer();
+      }
     }
   }
 
   @Watch("receivedTime")
   receiver(val: string) {
     this.timing = val;
+  }
+
+  @Watch("sessionMenu")
+  hideSessionMenu(val: number) {
+    this.hideCard = val === 0 ? false : true;
   }
 
   @Watch("inSession")
@@ -85,13 +105,13 @@ export default class TimerCard extends Vue {
   stateChange(val: number) {
     switch (val) {
       case 0: {
-        this.timing = "25:00";
-        this.minutes = 25;
+        this.timing = "1:00";
+        this.minutes = 1;
         break;
       }
       case 1: {
-        this.timing = "05:00";
-        this.minutes = 5;
+        this.timing = "01:00";
+        this.minutes = 1;
         break;
       }
       case 2: {
@@ -107,12 +127,12 @@ export default class TimerCard extends Vue {
 
   @Watch("active")
   onPropertyChanged(val: boolean) {
-    // console.log(val);
     const path: SVGPathElement | null = document.querySelector("path");
     if (!path) return;
     if (val) {
       this.started = true;
       if (!this.inSession){
+        this.timerMain();
         this.interval = setInterval(this.timerMain, 1000);
       }
       path.style.display = "block";
@@ -150,13 +170,18 @@ export default class TimerCard extends Vue {
     this.reset();
     switch (this.state) {
       case 0: {
-        this.timing = document.title = "Breaky Time!";
+        this.timing = document.title = "Time for a break!";
         this.notifyMe("WOOOOHOOO TIME FOR A BREAK!");
         break;
       }
       case 1: {
         this.timing = document.title = "Get back to work!";
         this.notifyMe("Okay mister, you know what's up. Back to work");
+        break;
+      }
+      case 2: {
+        this.timing = document.title = "Get back to work!";
+        this.notifyMe("Wow that was a long break! Time to get back to work");
         break;
       }
     }
@@ -177,6 +202,11 @@ export default class TimerCard extends Vue {
 </script>
 
 <style lang="scss" scoped>
+
+.hideTimerCard {
+  display: none !important;
+}
+
 .card {
   display: flex;
   align-items: center;

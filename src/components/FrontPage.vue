@@ -50,17 +50,17 @@
     </div>
     <div class="content">
       <TimerCard
-        v-if="sessionMenu == 0"
         @reset-timer="resetTimer"
         @time-remaining="timeRemaining"
+        :sessionMenu="sessionMenu"
         :state="state"
         :inSession="inSession"
-        :startAt="state == 0 ? 25 : state == 1 ? 5 : 15"
+        :startAt="state == 0 ? 1 : state == 1 ? 1 : 15"
         :timerWatch="timerWatch"
         :receivedTime="receivedTime"
         :active="active"
       />
-      <div class="joinMenu" v-else-if="sessionMenu == 1">
+      <div class="joinMenu" v-if="sessionMenu == 1">
         <h2>Join Session</h2>
         <div v-if="showingPeople">
           <p
@@ -73,7 +73,7 @@
           </p>
         </div>
       </div>
-      <div class="createMenu" v-else>
+      <div class="createMenu" v-else-if="sessionMenu == 2">
         <h2>Create Session</h2>
         <form>
           <label for="fname">Enter a username:</label><br />
@@ -246,28 +246,37 @@ export default class FrontPage extends Vue {
   }
   startWebSocket(type: object | undefined) {
     this.ws = new WebSocket("ws://localhost:9898/");
+
     const self = this.ws;
+
     this.ws.onopen = () => {
       console.log("WebSocket Connection Established");
       if (type) self.send(JSON.stringify(type));
     };
+
     this.ws.onclose = () => {
       console.log("WebSocket Connection Closed");
       this.ws = undefined;
     };
+
     this.ws.onerror = () => {
       console.log("WebSocket Error");
       this.ws = undefined;
     };
+
     this.ws.onmessage = (e) => {
       console.log(`Received: ${e.data}`);
     };
+
     this.ws.onmessage = (e) => {
-      const resType: string = JSON.parse(e.data).type;
+
+      const data = JSON.parse(e.data);
+      const resType: string = data.type;
+
       if (resType == "usernames") {
         this.people = undefined;
         this.showingPeople = false;
-        for (const el of JSON.parse(e.data).names) {
+        for (const el of data.names) {
           const current = {
             id: Math.random(),
             name: el,
@@ -280,13 +289,13 @@ export default class FrontPage extends Vue {
 
       else if (resType == "confirmJoin") {
         this.inSession = true;
-        this.currentSessionHost = JSON.parse(e.data).name;
-        this.peopleInSession = JSON.parse(e.data).numUsers;
-        this.state = JSON.parse(e.data).state;
+        this.currentSessionHost = data.name;
+        this.peopleInSession = data.numUsers;
+        this.state = data.state;
 
         this.sessionMenu = 0;
-        this.receivedTime = JSON.parse(e.data).time;
-        this.active = JSON.parse(e.data).active;
+        this.receivedTime = data.time;
+        this.active = data.active;
       }
 
       else if (resType == "takenUsername") {
@@ -302,14 +311,14 @@ export default class FrontPage extends Vue {
       }
 
       else if (resType == "successfulCreate") {
-        this.sessionMenu = 0;
         this.hostingSession = true;
         this.formMessageActive = false;
+        this.sessionMenu = 0;
         this.peopleInSession = 0;
       }
 
       else if (resType == "getUsersInfo") {
-        this.peopleInSession = JSON.parse(e.data).numUsers;
+        this.peopleInSession = data.numUsers;
       }
 
       else if (resType == "endSession") {
@@ -329,22 +338,21 @@ export default class FrontPage extends Vue {
       }
 
       else if (resType == "hostStatus") {
-        this.peopleInSession = JSON.parse(e.data).numUsers;
-        this.state = JSON.parse(e.data).state;
-        this.active = JSON.parse(e.data).active;
-        console.log("received",JSON.parse(e.data).active);
-        this.timerWatch = JSON.parse(e.data).time;
+        this.peopleInSession = data.numUsers;
+        this.state = data.state;
+        this.active = data.active;
+        this.timerWatch = data.time;
       }
 
       else {
-        console.log(`hey, received:${e.data}`);
+        console.log(`Received: ${e.data}`);
       }
     };
   }
   personClick(name) {
     const joinObj = {
       type: "join",
-      name: name,
+      name: name
     };
     if (!this.ws) this.startWebSocket(joinObj);
     else this.ws.send(JSON.stringify(joinObj));
@@ -353,7 +361,9 @@ export default class FrontPage extends Vue {
     this.sessionMenu = 1;
     if (!this.ws) {
       this.startWebSocket({ type: "fetchNames" });
-    } else this.ws.send(JSON.stringify({ type: "fetchNames" }));
+    } else {
+      this.ws.send(JSON.stringify({ type: "fetchNames" }));
+    }
   }
   createSession() {
     this.sessionMenu = 2;
@@ -364,15 +374,19 @@ export default class FrontPage extends Vue {
       type: "create",
       name: name,
       state: this.state,
-      active: this.active,
+      active: this.active
     };
-    if (!this.ws) this.startWebSocket(createObj);
-    else this.sendWS(JSON.stringify(createObj));
+    if (!this.ws) {
+      this.startWebSocket(createObj);
+    } else {
+      this.sendWS(JSON.stringify(createObj));
+    }
   }
 }
 </script>
 
 <style scoped lang="scss">
+
 input[type="text"],
 select {
   width: 50%;
