@@ -1,7 +1,8 @@
 # pomodoro-timer
 
 Collaborative web app for the Pomodoro time management technique.\
-Created using WebSockets and a Node.js backend, you can use this app to efficiently spend your time and keep your mind fresh!
+Created using WebSockets and a Node.js backend, you can use this app to efficiently spend your time and keep your mind fresh!\
+By creating a session, your friends can join your timer and you can optimize time spent during project work.
 
 How does it work:
 - Pick a task
